@@ -1,0 +1,152 @@
+"""
+快速抢票系统配置文件
+请根据实际情况修改以下配置
+"""
+
+# ==================== 开票时间配置 ====================
+# 格式: (年, 月, 日, 时, 分, 秒, 微秒)
+# 微秒可选，默认为0
+# 注意：这里设置为今天的12:40用于测试
+from datetime import datetime
+today = datetime.now()
+TICKET_TIME = {
+    'year': today.year,
+    'month': today.month,
+    'day': today.day,
+    'hour': 12,
+    'minute': 52,  # 注意：不要使用前导零（如 05），直接写 5
+    'second': 0,
+    'microsecond': 0  # 可选，精确到微秒级别
+}
+
+# ==================== 按钮坐标配置 ====================
+# ⚠️ 重要：请先使用校准模式获取准确坐标
+# 命令: python 快速抢票系统.py calibrate
+#
+# 坐标格式: (x, y)
+# 获取方法：
+#   1. 运行校准模式
+#   2. 将鼠标移动到对应按钮上
+#   3. 等待5秒，系统自动记录坐标
+
+CLICK_POSITIONS = {
+                    
+    }
+
+# ==================== 高级配置 ====================
+
+# 提前准备时间（毫秒）
+# 建议值：100-200ms
+# 说明：在开票时间前多少毫秒开始准备执行
+PRECISION_MS = 100
+
+# 刷新手势配置
+# 说明：在开票时间前多少秒执行双指上滑刷新页面
+REFRESH_BEFORE_SECONDS = 5  # 开票前5秒执行刷新
+
+# 循环点击配置
+# 说明：开票后循环点击第一步、第四步和最后一步的持续时间（秒）
+LOOP_DURATION = 10.0  # 循环持续时间，默认10秒
+
+# 步骤间延迟时间（秒）
+# 说明：每个步骤之间的等待时间，可根据实际网络响应速度调整
+# 如果网络快，可以减小（如0.03），如果网络慢，可以增大（如0.1）
+STEP_DELAY = {
+    'after_立即购票': 0.05,  # 点击立即购票后的等待时间
+    'after_场次': 0.5,       # 选择场次后的等待时间（关键！等待票档列表加载，可调整0.3-0.8秒）
+    'before_票档': 0.3,      # 票档点击前的额外等待时间（可调整0.2-0.5秒）
+    'after_票档': 0.2,       # 选择票档后的等待时间（关键步骤，增加延迟）
+    'after_确认': 0.1,       # 确认后的等待时间（增加，确保页面加载完成）
+    'after_提交': 0.1,       # 提交后的等待时间
+}
+
+# ==================== 多场次/多票档配置 ====================
+# 如果需要支持多个场次或票档的自动选择
+
+# 场次优先级（按顺序尝试选择，找到第一个可用的就停止）
+PERFORMANCE_PRIORITY = [
+    '场次',  # 主场次坐标
+    # '场次2',  # 备选场次1（需要在CLICK_POSITIONS中定义）
+    # '场次3',  # 备选场次2
+]
+
+# 票档优先级
+TICKET_TIER_PRIORITY = [
+    '票档',  # 首选票档
+    # '票档2',  # 备选票档1
+    # '票档3',  # 备选票档2
+]
+
+# ==================== 日志配置 ====================
+# 日志级别: DEBUG, INFO, WARNING, ERROR
+LOG_LEVEL = 'INFO'
+
+# 是否显示详细的时间戳（包含微秒）
+SHOW_MICROSECONDS = True
+
+# ==================== 测试模式配置 ====================
+# 设置为True时，不会等待开票时间，立即执行（用于测试）
+# 设置为False时，会等待预设的开票时间，并在开票前刷新页面（正式抢票模式）
+TEST_MODE = False  # 正式抢票模式：等待预设时间并刷新页面
+
+# 测试模式下，是否等待确认后执行（False=立即执行，True=等待回车）
+TEST_MODE_WAIT_CONFIRM = False  # 测试时改为False可立即执行
+
+# 可见模式：True=鼠标会先移动到位置再点击（便于观察），False=直接点击（最快速度）
+VISIBLE_MODE = True  # 测试时建议True，正式抢票时改为False
+
+# ==================== 配置验证 ====================
+def validate_config():
+    """验证配置是否正确"""
+    errors = []
+    
+    # 检查开票时间
+    if not all(k in TICKET_TIME for k in ['year', 'month', 'day', 'hour', 'minute', 'second']):
+        errors.append("❌ 开票时间配置不完整")
+    
+    # 检查必须的坐标
+    required_positions = ['立即购票', '提交']
+    for pos in required_positions:
+        if pos not in CLICK_POSITIONS:
+            errors.append(f"❌ 缺少必须的坐标配置: {pos}")
+    
+    # 检查坐标格式
+    for name, pos in CLICK_POSITIONS.items():
+        if not isinstance(pos, (tuple, list)) or len(pos) != 2:
+            errors.append(f"❌ 坐标格式错误: {name} = {pos} (应为 (x, y))")
+        elif not all(isinstance(v, int) for v in pos):
+            errors.append(f"❌ 坐标必须为整数: {name} = {pos}")
+    
+    if errors:
+        print("=" * 60)
+        print("⚠️ 配置验证失败：")
+        for error in errors:
+            print(f"   {error}")
+        print("=" * 60)
+        return False
+    
+    return True
+
+
+# ==================== 配置示例说明 ====================
+"""
+使用示例：
+
+1. 基本配置（最少需要）：
+   - 设置开票时间
+   - 设置'立即购票'和'提交'坐标
+
+2. 完整配置：
+   - 所有按钮坐标
+   - 精确的开票时间
+   - 优化延迟参数
+
+3. 多备选方案：
+   - 设置多个场次/票档坐标
+   - 使用优先级列表自动选择
+
+配置完成后，在主程序中加载：
+    from config import TICKET_TIME, CLICK_POSITIONS, PRECISION_MS
+"""
+
+
