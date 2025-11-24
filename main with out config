@@ -1,0 +1,229 @@
+import pyautogui
+import time
+from datetime import datetime
+import logging
+import subprocess
+import sys
+
+
+def check_accessibility_permission():
+    """检查macOS辅助功能权限"""
+    try:
+        pos = pyautogui.position()
+        return True
+    except Exception:
+        return False
+
+def show_permission_help():
+    """显示权限授予帮助"""
+    print("=" * 60)
+    print("❌ 辅助功能权限未授予！")
+    print("=" * 60)
+    print()
+    print("pyautogui 需要辅助功能权限才能控制鼠标和键盘")
+    print()
+    print("📋 授予权限步骤：")
+    print("   1. 打开 系统设置（System Settings）")
+    print("   2. 点击 隐私与安全性（Privacy & Security）")
+    print("   3. 点击 辅助功能（Accessibility）")
+    print("   4. 点击左下角的 🔒 锁图标并输入密码解锁")
+    print("   5. 找到并勾选以下应用之一：")
+    print("      - Terminal（终端）")
+    print("      - Python")
+    print("      - 或运行此脚本的应用")
+    print("   6. 如果找不到，点击 ➕ 按钮添加应用")
+    print()
+    print("=" * 60)
+    print()
+    
+    choice = input("是否自动打开系统设置页面？(y/n): ").strip().lower()
+    if choice in ['y', 'yes']:
+        try:
+            subprocess.run([
+                'open',
+                'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility'
+            ])
+            print("✅ 已打开系统设置页面")
+        except Exception as e:
+            print(f"❌ 无法自动打开设置: {e}")
+            print("   请手动打开系统设置")
+    
+    print()
+    print("💡 重要：授予权限后，需要完全退出并重新运行程序才能生效")
+    print()
+
+
+def wait_until_time(target_time: datetime):
+    """等待到指定时间"""
+    now = datetime.now()
+    time_diff_initial = (target_time - now).total_seconds()
+    
+    print("=" * 60)
+    print("⏰ 等待开始时间...")
+    print(f"   目标时间: {target_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"   当前时间: {now.strftime('%Y-%m-%d %H:%M:%S')}")
+    
+    if time_diff_initial < 0:
+        print(f"   ⚠️ 开始时间已过！已过去 {abs(time_diff_initial):.2f}秒")
+        print("   程序将立即执行")
+        print("=" * 60)
+        print()
+        return
+    else:
+        print(f"   距离开始: {time_diff_initial:.2f}秒")
+        print(f"   将在开始前10秒显示倒计时")
+        print("=" * 60)
+        print()
+    
+    last_countdown_second = -1  # 记录上次显示的倒计时秒数
+    last_info_second = -1  # 记录上次显示信息的秒数
+    
+    while True:
+        now = datetime.now()
+        time_diff = (target_time - now).total_seconds()
+        
+        if time_diff <= 0:
+            print("=" * 60)
+            print("🚀 开始时间到！")
+            print("=" * 60)
+            print()
+            break
+        
+        # 开票前10秒开始倒计时（每秒显示一次）
+        if time_diff <= 10 and time_diff > 0:
+            current_second = int(time_diff)
+            if current_second != last_countdown_second:
+                print(f"⏳ 倒计时: {current_second}秒")
+                last_countdown_second = current_second
+        
+        # 如果距离开票时间超过10秒，每10秒显示一次进度
+        elif time_diff > 10:
+            current_second = int(time_diff)
+            # 每10秒显示一次进度（例如：60秒、50秒、40秒...）
+            if current_second % 10 == 0 and current_second != last_info_second:
+                if time_diff >= 60:
+                    minutes = int(time_diff // 60)
+                    seconds = int(time_diff % 60)
+                    print(f"⏳ 距离开始: {minutes}分{seconds}秒")
+                else:
+                    print(f"⏳ 距离开始: {current_second}秒")
+                last_info_second = current_second
+            # 如果刚进入等待状态（第一次循环），立即显示一次
+            elif last_info_second == -1:
+                if time_diff >= 60:
+                    minutes = int(time_diff // 60)
+                    seconds = int(time_diff % 60)
+                    print(f"⏳ 距离开始: {minutes}分{seconds}秒")
+                else:
+                    print(f"⏳ 距离开始: {current_second}秒")
+                last_info_second = current_second
+        
+        # 提前准备（提前100ms开始准备，确保精确）
+        if time_diff <= 0.1:
+            # 精确等待到目标时间（使用微秒级精度）
+            while True:
+                now = datetime.now()
+                time_diff = (target_time - now).total_seconds()
+                if time_diff <= 0:
+                    break
+                # 最后阶段使用极短的sleep，确保精确到毫秒级
+                if time_diff > 0.01:
+                    time.sleep(0.01)
+                else:
+                    time.sleep(max(0, time_diff * 0.5))  # 使用一半时间，更精确
+            break
+        
+        # 自适应sleep时间
+        if time_diff > 60:
+            time.sleep(1)
+        elif time_diff > 10:
+            time.sleep(0.1)
+        else:
+            time.sleep(0.01)
+
+
+def continuous_click(x: int, y: int, duration: float = 5.0):
+    """
+    连续点击指定坐标
+    :param x: X坐标
+    :param y: Y坐标
+    :param duration: 持续时间（秒）
+    """
+    print("=" * 60)
+    print(f"🔄 开始连续点击坐标 ({x}, {y})，持续 {duration} 秒...")
+    print("=" * 60)
+    print()
+    
+    # 记录精确的开始时间
+    start_time = time.time()
+    start_datetime = datetime.now()
+    
+    print(f"   开始时间: {start_datetime.strftime('%H:%M:%S.%f')[:-3]}")
+    print()
+    
+    click_count = 0
+    
+    # 精确控制持续时间
+    while (time.time() - start_time) < duration:
+        try:
+            pyautogui.moveTo(x, y, duration=0)
+            pyautogui.click(x, y, duration=0)
+            click_count += 1
+            time.sleep(0.01)  # 10ms间隔
+        except Exception as e:
+            print(f"⚠️ 点击失败: {e}")
+    
+    end_time = time.time()
+    elapsed = end_time - start_time
+    end_datetime = datetime.now()
+    
+    print()
+    print("=" * 60)
+    print("✅ 连续点击完成")
+    print(f"   开始时间: {start_datetime.strftime('%H:%M:%S.%f')[:-3]}")
+    print(f"   结束时间: {end_datetime.strftime('%H:%M:%S.%f')[:-3]}")
+    print(f"   持续时间: {elapsed:.3f}秒")
+    print(f"   点击次数: {click_count}次")
+    print(f"   平均速度: {click_count/elapsed:.1f}次/秒")
+    print("=" * 60)
+
+
+def main():
+    """主函数"""
+    print("=" * 60)
+    print("🏓 乒乓球连点脚本")
+    print("=" * 60)
+    print()
+    
+    # 检查权限
+    if not check_accessibility_permission():
+        show_permission_help()
+        sys.exit(1)
+    
+    # 配置pyautogui
+    pyautogui.FAILSAFE = True  # 鼠标移到角落可紧急停止
+    pyautogui.PAUSE = 0  # 无延迟
+    
+    # 设置目标时间和坐标
+    target_time = datetime(2025, 11, 20, 12, 31, 0, 0)
+    click_x, click_y = 253, 770
+    click_duration = 3.0  # 持续5秒
+    
+    print(f"📍 点击坐标: ({click_x}, {click_y})")
+    print(f"⏰ 开始时间: {target_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"⏱️  持续时间: {click_duration}秒")
+    print()
+    
+    # 等待到指定时间
+    wait_until_time(target_time)
+    
+    # 开始连续点击
+    continuous_click(click_x, click_y, click_duration)
+    
+    print()
+    print("🎉 脚本执行完成！")
+
+
+if __name__ == "__main__":
+    main()
+
